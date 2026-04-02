@@ -1,0 +1,58 @@
+import { useState } from 'react'
+import axios from 'axios'
+
+function useFoodSearch() {
+  const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const searchFood = async (query) => {
+    if (!query || !query.trim()) {
+      setResults([])
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const url = `https://world.openfoodfacts.org/cgi/search.pl`
+      const response = await axios.get(url, {
+        params: {
+          search_terms: query,
+          json: 1,
+          page_size: 10,
+        },
+      })
+
+      const filtered = (response.data.products || []).filter(
+        (item) => item.product_name && item.product_name.trim()
+      )
+
+      setResults(
+        filtered.map((item) => ({
+          ...item,
+          id: item.code || item._id || item.id || `${Math.random()}`,
+        }))
+      )
+    } catch (err) {
+      if (err.response) {
+        // the request was made, the server responded with a non-2xx status
+        setError(`Server error: ${err.response.status}. Please try again.`)
+      } else if (err.request) {
+        // the request was made but no response received (network offline)
+        setError('Network error. Check your connection and try again.')
+      } else {
+        // something else went wrong
+        setError('Something went wrong. Please try again.')
+      }
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return { results, loading, error, searchFood }
+}
+
+export default useFoodSearch
